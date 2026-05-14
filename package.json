@@ -1,0 +1,24 @@
+{
+"name": "bot-email-render",
+"version": "1.0.0",
+"description": "Servidor backend para disparo de emails em massa via API",
+"main": "server.js",
+"scripts": {
+"start": "node server.js",
+"test": "echo "Error: no test specified" && exit 1"
+},
+"keywords": [
+"email",
+"bot",
+"mailer",
+"render",
+"nodemailer"
+],
+"author": "",
+"license": "ISC",
+"dependencies": {
+"cors": "^2.8.5",
+"express": "^4.19.2",
+"nodemailer": "^6.9.13"
+}
+}
