@@ -36,14 +36,28 @@ app.post('/api/send-single', async (req, res) => {
     }
 
     try {
-        // 1. Criar a conexão com o provedor (Gmail/Hotmail)
-        const transporter = nodemailer.createTransport({
-            service: provider,
-            auth: {
-                user: email,
-                pass: password
-            }
-        });
+        // 1. Criar a conexão com o provedor com rotas explícitas para a nuvem (Render)
+        let transporterConfig = {};
+        
+        if (provider === 'gmail') {
+            transporterConfig = {
+                host: 'smtp.gmail.com',
+                port: 465, // Porta com segurança SSL nativa do Gmail
+                secure: true,
+                auth: { user: email, pass: password },
+                tls: { rejectUnauthorized: false } // Evita bloqueio de firewall de nuvem
+            };
+        } else {
+            transporterConfig = {
+                host: 'smtp-mail.outlook.com',
+                port: 587, // Porta de segurança padrão da Microsoft
+                secure: false, // Exige false para porta 587 (STARTTLS)
+                auth: { user: email, pass: password },
+                tls: { rejectUnauthorized: false }
+            };
+        }
+
+        const transporter = nodemailer.createTransport(transporterConfig);
 
         // 2. Montar o email
         const mailOptions = {
