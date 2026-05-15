@@ -36,24 +36,30 @@ app.post('/api/send-single', async (req, res) => {
     }
 
     try {
-        // 1. Criar a conexão com o provedor com rotas explícitas para a nuvem (Render)
+        // 1. Criar a conexão com o provedor com rotas explícitas para a nuvem
         let transporterConfig = {};
         
         if (provider === 'gmail') {
             transporterConfig = {
                 host: 'smtp.gmail.com',
-                port: 465, // Porta com segurança SSL nativa do Gmail
-                secure: true,
+                port: 587, // Tentando a porta 587 (Menos chances de bloqueio)
+                secure: false, // Obrigatório false para porta 587
+                requireTLS: true,
                 auth: { user: email, pass: password },
-                tls: { rejectUnauthorized: false } // Evita bloqueio de firewall de nuvem
+                tls: { rejectUnauthorized: false }, // Evita bloqueio de firewall
+                connectionTimeout: 10000, // Limite de 10s para não ficar travado
+                greetingTimeout: 10000
             };
         } else {
             transporterConfig = {
                 host: 'smtp-mail.outlook.com',
                 port: 587, // Porta de segurança padrão da Microsoft
                 secure: false, // Exige false para porta 587 (STARTTLS)
+                requireTLS: true,
                 auth: { user: email, pass: password },
-                tls: { rejectUnauthorized: false }
+                tls: { rejectUnauthorized: false },
+                connectionTimeout: 10000,
+                greetingTimeout: 10000
             };
         }
 
