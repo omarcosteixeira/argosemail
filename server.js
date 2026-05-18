@@ -1,35 +1,29 @@
-/**
- * SERVIDOR DO DISPARADOR DE EMAIL (Pronto para o Railway)
- * 
- * COMO PUBLICAR NO RAILWAY:
- * 1. Mantenha este arquivo e o "package.json" em uma pasta.
- * 2. Suba a pasta para o seu GitHub.
- * 3. Crie uma conta no Railway.app.
- * 4. Clique em "New Project" > "Deploy from GitHub repo".
- * 5. Selecione o seu repositório. O Railway vai instalar e rodar sozinho!
- */
-
 const express = require('express');
 const cors = require('cors');
 const nodemailer = require('nodemailer');
 
 const app = express();
 
-// Middleware
-app.use(cors()); // Permite que seu Painel se conecte com esta API
-app.use(express.json()); // Permite receber dados em formato JSON
+// Configurações do servidor (Middlewares)
+app.use(cors()); // Permite que o seu Painel (Frontend) se comunique com esta API sem bloqueios
+app.use(express.json()); // Permite que a API entenda os dados em formato JSON (lista de contatos, mensagem, etc)
 
-// Rota de teste
+// Rota básica apenas para você testar se o servidor está online no navegador
 app.get('/', (req, res) => {
-    res.send('✅ Bot de Email está Online no Railway!');
+    res.status(200).json({ 
+        status: 'Online', 
+        mensagem: '🤖 API do Bot de Mala Direta está rodando perfeitamente!' 
+    });
 });
 
-// Rota principal de envio
+// Esta é a rota que o seu Painel vai chamar para cada contato da lista
 app.post('/api/send-single', async (req, res) => {
+    // Extraindo os dados recebidos do Painel
     const { provider, email, password, subject, message, targetEmail } = req.body;
 
-    if (!email || !password || !targetEmail) {
-        return res.status(400).json({ success: false, error: 'Dados incompletos.' });
+    // Validação básica para garantir que nenhum dado falte
+    if (!email || !password || !targetEmail || !subject || !message) {
+        return res.status(400).json({ success: false, error: 'Dados incompletos. Verifique as configurações no painel.' });
     }
 
     try {
@@ -38,49 +32,65 @@ app.post('/api/send-single', async (req, res) => {
         if (provider === 'gmail') {
             transporterConfig = {
                 host: 'smtp.gmail.com',
-                port: 587, 
-                secure: false, 
-                requireTLS: true,
-                auth: { user: email, pass: password },
-                tls: { rejectUnauthorized: false }, 
-                connectionTimeout: 10000, 
-                greetingTimeout: 10000
+                port: 587, // Porta segura recomendada para TLS
+                secure: false, // O false aqui significa que vamos usar TLS (STARTTLS), e não SSL direto
+                auth: { 
+                    user: email, 
+                    pass: password // A Senha de Aplicativo de 16 dígitos
+                },
+                tls: { rejectUnauthorized: false } // Ajuda a evitar bloqueios de certificado em servidores locais/nuvem
             };
         } else {
+            // Configuração para Hotmail / Outlook
             transporterConfig = {
                 host: 'smtp-mail.outlook.com',
-                port: 587, 
-                secure: false, 
-                requireTLS: true,
-                auth: { user: email, pass: password },
-                tls: { rejectUnauthorized: false },
-                connectionTimeout: 10000,
-                greetingTimeout: 10000
+                port: 587,
+                secure: false,
+                auth: { 
+                    user: email, 
+                    pass: password 
+                },
+                tls: { rejectUnauthorized: false }
             };
         }
 
+        // Criando o "carteiro" (transporter) do Nodemailer
         const transporter = nodemailer.createTransport(transporterConfig);
 
         const mailOptions = {
-            from: email,
-            to: targetEmail,
-            subject: subject,
-            html: message
+            from: `Mala Direta <${email}>`, // Nome do remetente + Email
+            to: targetEmail,                // Email do cliente que vai receber
+            subject: subject,               // Assunto da campanha
+            html: message                   // Corpo do email (suporta HTML)
         };
 
-        await transporter.sendMail(mailOptions);
+        // Executando o envio através do Nodemailer
+        const info = await transporter.sendMail(mailOptions);
         
+        console.log(`✅ Sucesso: Email enviado para ${targetEmail} | ID: ${info.messageId}`);
+        
+        // Devolvendo a resposta de sucesso para o Painel mostrar a barrinha verde
         res.status(200).json({ success: true, message: `Enviado com sucesso para ${targetEmail}` });
 
     } catch (error) {
-        console.error(`Erro ao enviar para ${targetEmail}:`, error.message);
+        console.error(`❌ Erro ao enviar para ${targetEmail}:`, error.message);
+        
+        // Devolvendo a mensagem de erro exata para o Painel mostrar em vermelho
         res.status(500).json({ success: false, error: error.message });
     }
 });
 
-// O Railway define a porta automaticamente através da variável PORT
+// Define a porta (usa a variável de ambiente se estiver na nuvem, ou a porta 10000 no PC local)
 const PORT = process.env.PORT || 10000;
 
 app.listen(PORT, () => {
-    console.log(`🚀 Servidor rodando na porta ${PORT} (Pronto para o Railway)`);
+    console.log(`
+==================================================
+🚀 API DE MALA DIRETA (NODEMAILER) INICIADA!
+==================================================
+➡️  Servidor rodando na porta: ${PORT}
+➡️  URL para colocar no Painel: http://localhost:${PORT}
+
+Aguardando comandos de disparo...
+    `);
 });
